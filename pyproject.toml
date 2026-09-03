@@ -13,6 +13,7 @@ dev = [
     "hypothesis",
     "coverage",
     "pylint",
+    "build",
 ]
 
 [build-system]

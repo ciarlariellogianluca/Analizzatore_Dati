@@ -34,3 +34,12 @@ jobs:
           python -m coverage erase
           python -m coverage run -m pytest -v
           python -m coverage report -m
+
+      - name: Costruisci il pacchetto Python
+        run: python -m build
+
+      - name: Carica gli artefatti di distribuzione
+        uses: actions/upload-artifact@v4
+        with:
+          name: pacchetto-python
+          path: dist/
