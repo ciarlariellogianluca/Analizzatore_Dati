@@ -1,0 +1,8 @@
+[project]
+name = "public-safety-data-analyzer"
+version = "0.1.0"
+description = "Applicazione Python per l'analisi descrittiva di dati aggregati relativi a eventi di pubblica sicurezza."
+requires-python = ">=3.9"
+dependencies = [
+    "pandas",
+]
