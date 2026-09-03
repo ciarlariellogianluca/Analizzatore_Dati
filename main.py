@@ -12,8 +12,10 @@ from caricatore_dati import carica_dati, preprocessa_dati, valida_colonne
 def mostra_schermata_iniziale() -> str:
     """Mostra una finestra grafica per caricare il file CSV e restituisce il percorso scelto."""
     try:
-        import tkinter as tk
-        from tkinter import filedialog
+        # Import posticipato di proposito: la modalita' CLI (usata da test,
+        # CI e Docker) non deve richiedere tkinter ne' un display grafico.
+        import tkinter as tk  # pylint: disable=import-outside-toplevel
+        from tkinter import filedialog  # pylint: disable=import-outside-toplevel
     except ImportError:
         return input(
             "Interfaccia grafica non disponibile.\nInserisci il percorso del file CSV: "

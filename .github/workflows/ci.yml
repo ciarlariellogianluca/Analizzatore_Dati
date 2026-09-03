@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verifica:
+    name: Lint e test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout del repository
+        uses: actions/checkout@v4
+
+      - name: Configura Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Aggiorna pip
+        run: python -m pip install --upgrade pip
+
+      - name: Installa il progetto e le dipendenze di sviluppo
+        run: python -m pip install .[dev]
+
+      - name: Esegui pylint
+        run: python -m pylint main.py analisi.py caricatore_dati.py
+
+      - name: Esegui la suite di test (pytest + Hypothesis) sotto coverage
+        run: |
+          python -m coverage erase
+          python -m coverage run -m pytest -v
+          python -m coverage report -m
