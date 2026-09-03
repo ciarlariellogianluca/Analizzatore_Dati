@@ -130,11 +130,13 @@ def stampa_riepilogo(riepilogo: Dict[str, Any]) -> None:
 
 def main() -> None:
     """Coordina scelta del file, caricamento, validazione, analisi e output."""
-    percorso_file = mostra_schermata_iniziale()
-
-    if not percorso_file:
-        print("Nessun file selezionato. Programma terminato.")
-        sys.exit(0)
+    if len(sys.argv) > 1:
+        percorso_file = sys.argv[1]
+    else:
+        percorso_file = mostra_schermata_iniziale()
+        if not percorso_file:
+            print("Nessun file selezionato. Programma terminato.")
+            sys.exit(0)
 
     try:
         dataframe = carica_dati(percorso_file)
