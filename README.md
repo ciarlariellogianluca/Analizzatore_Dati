@@ -16,7 +16,7 @@ operative automatiche.
 ## Funzionalità attuali
 
 - Selezione del file CSV tramite interfaccia grafica (finestra con
-  pulsante "Carica file CSV").
+  pulsante "Carica file CSV"), oppure modalità CLI/headless.
 - Caricamento del dataset da file CSV.
 - Verifica dell'esistenza e della leggibilità del file.
 - Validazione della presenza delle colonne obbligatorie.
@@ -56,34 +56,83 @@ fisiche.
 
 ## Esecuzione
 
-Avviare il programma con:
+Modalità GUI (apre una finestra per scegliere il file):
 
 ```
 py main.py
 ```
 
-Verrà mostrata una finestra grafica: premendo il pulsante "Carica file
-CSV" si apre il selettore di file del sistema operativo per scegliere
-il dataset da analizzare. Il riepilogo dell'analisi viene mostrato nel
-terminale da cui è stato avviato il programma.
+Modalità CLI/headless, senza aprire alcuna finestra (usata da test,
+CI/CD e Docker):
+
+```
+py main.py dati_esempio.csv
+```
+
+In entrambi i casi il riepilogo dell'analisi viene stampato nel
+terminale.
+
+## Test
+
+Il progetto include una suite di 45 test automatici con `pytest`:
+
+- unit test su `caricatore_dati.py` e `analisi.py`;
+- property-based test con Hypothesis, che verificano proprietà generali
+  su input generati automaticamente;
+- test di integrazione, che eseguono `main.py` come processo reale in
+  modalità CLI.
+
+Eseguire l'intera suite:
+
+```
+py -m pytest -v
+```
+
+Misurare la coverage:
+
+```
+py -m coverage run -m pytest
+py -m coverage report -m
+```
+
+Verificare lo stile del codice:
+
+```
+py -m pylint main.py analisi.py caricatore_dati.py
+```
+
+## CI/CD
+
+Una pipeline GitHub Actions (`.github/workflows/ci.yml`) viene eseguita
+automaticamente ad ogni push e pull request verso `main`:
+
+1. lint del codice con `pylint`;
+2. l'intera suite di test sotto coverage;
+3. build del pacchetto Python (`python -m build`), pubblicata come
+   artifact della run;
+4. build dell'immagine Docker.
+
+Solo sui push diretti a `main` — mai sulle pull request — se tutti gli
+step precedenti hanno successo, la pipeline pubblica automaticamente
+l'immagine Docker aggiornata su Docker Hub.
 
 ## Docker
 
-L'applicazione è disponibile anche come immagine Docker pubblicata su
-Docker Hub, per eseguirla senza installare Python o le dipendenze sulla
-macchina host.
+L'applicazione è disponibile come immagine Docker pubblica su Docker
+Hub (`kgianni/public-safety-data-analyzer`), pubblicata automaticamente
+dalla pipeline CI/CD ad ogni push su `main`.
 
-Scaricare l'immagine:
+Scaricare l'ultima immagine pubblicata:
 
 ```
-docker pull kgianni/public-safety-data-analyzer:0.1.0
+docker pull kgianni/public-safety-data-analyzer:latest
 ```
 
 Eseguire l'analisi su un file CSV locale, montandolo dentro il
 container in sola lettura (esempio PowerShell):
 
 ```powershell
-docker run --rm -v "C:\percorso\del\tuo\file.csv:/dati/file.csv:ro" kgianni/public-safety-data-analyzer:0.1.0 /dati/file.csv
+docker run --rm -v "C:\percorso\del\tuo\file.csv:/dati/file.csv:ro" kgianni/public-safety-data-analyzer:latest /dati/file.csv
 ```
 
 Il parametro `-v host:container:ro` monta il file CSV della macchina
@@ -97,16 +146,23 @@ stesso formato descritto in [Struttura del dataset](#struttura-del-dataset).
 
 - Python 3
 - [pandas](https://pandas.pydata.org/)
-- tkinter (incluso nella libreria standard di Python)
+- tkinter (incluso nella libreria standard di Python, usato solo dalla
+  modalità GUI)
 
 ## Struttura del progetto
 
 ```
 public-safety-data-analyzer/
 │
+├── .github/
+│   └── workflows/
+│       └── ci.yml
+│
 ├── README.md
 ├── LICENSE
 ├── .gitignore
+├── .dockerignore
+├── Dockerfile
 ├── pyproject.toml
 │
 ├── main.py
@@ -118,6 +174,10 @@ public-safety-data-analyzer/
 │   └── specifica.md
 │
 └── tests/
+    ├── test_caricatore_dati.py
+    ├── test_analisi.py
+    ├── test_proprieta.py
+    └── test_integrazione.py
 ```
 
 ## Documentazione
@@ -126,7 +186,10 @@ La specifica del progetto è disponibile in [doc/specifica.md](doc/specifica.md)
 
 ## Stato del progetto
 
-Progetto universitario in sviluppo. La versione attuale implementa il
-programma di analisi e la relativa documentazione di specifica; test
-automatici, integrazione continua e containerizzazione non sono ancora
-stati aggiunti e saranno oggetto di fasi successive.
+Progetto universitario. La versione attuale comprende: il programma di
+analisi con modalità GUI e CLI, la specifica del progetto, una suite di
+45 test automatici (unit, property-based con Hypothesis, integrazione)
+con misurazione della coverage, `pylint` a punteggio massimo, una
+pipeline CI/CD su GitHub Actions che esegue lint/test/coverage/build ad
+ogni push e pull request, e la pubblicazione automatica dell'immagine
+Docker su Docker Hub ad ogni push su `main`.
