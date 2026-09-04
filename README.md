@@ -67,6 +67,32 @@ CSV" si apre il selettore di file del sistema operativo per scegliere
 il dataset da analizzare. Il riepilogo dell'analisi viene mostrato nel
 terminale da cui è stato avviato il programma.
 
+## Docker
+
+L'applicazione è disponibile anche come immagine Docker pubblicata su
+Docker Hub, per eseguirla senza installare Python o le dipendenze sulla
+macchina host.
+
+Scaricare l'immagine:
+
+```
+docker pull kgianni/public-safety-data-analyzer:0.1.0
+```
+
+Eseguire l'analisi su un file CSV locale, montandolo dentro il
+container in sola lettura (esempio PowerShell):
+
+```powershell
+docker run --rm -v "C:\percorso\del\tuo\file.csv:/dati/file.csv:ro" kgianni/public-safety-data-analyzer:0.1.0 /dati/file.csv
+```
+
+Il parametro `-v host:container:ro` monta il file CSV della macchina
+host dentro il container (qui nel percorso `/dati/file.csv`), in sola
+lettura: il file non viene mai copiato nell'immagine né modificato. Il
+percorso passato dopo il nome dell'immagine è quello visto dal
+container, non quello sulla macchina host. Il CSV deve rispettare lo
+stesso formato descritto in [Struttura del dataset](#struttura-del-dataset).
+
 ## Dipendenze
 
 - Python 3
