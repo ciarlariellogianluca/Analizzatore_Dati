@@ -6,6 +6,7 @@ import pandas as pd
 import pytest
 
 from caricatore_dati import (
+    analizza_qualita_dati,
     carica_dati,
     ottieni_fascia_oraria,
     preprocessa_dati,
@@ -201,3 +202,177 @@ def test_preprocessa_dati_nessuna_riga_valida():
 
     with pytest.raises(ValueError):
         preprocessa_dati(dataframe)
+
+
+def test_preprocessa_dati_scarta_duplicati():
+    dataframe = pd.DataFrame(
+        {
+            "data": ["2026-01-12", "2026-01-12"],
+            "ora": ["22:30", "22:30"],
+            "zona": ["Zona_A", "Zona_A"],
+            "categoria": ["Furto", "Furto"],
+        }
+    )
+
+    risultato = preprocessa_dati(dataframe)
+
+    assert len(risultato) == 1
+
+
+# --- analizza_qualita_dati ----------------------------------------------------
+
+
+def test_analizza_qualita_dati_dataset_completamente_valido():
+    dataframe = pd.DataFrame(
+        {
+            "data": ["2026-01-12", "2026-01-13"],
+            "ora": ["22:30", "01:10"],
+            "zona": ["Zona_A", "Zona_B"],
+            "categoria": ["Furto", "Danneggiamento"],
+        }
+    )
+
+    report = analizza_qualita_dati(dataframe)
+
+    assert report["totale_record"] == 2
+    assert report["record_validi"] == 2
+    assert report["record_problematici"] == 0
+    assert report["duplicati"] == 0
+    assert report["problemi"] == []
+
+
+def test_analizza_qualita_dati_data_mancante():
+    dataframe = pd.DataFrame(
+        {"data": [""], "ora": ["22:30"], "zona": ["Zona_A"], "categoria": ["Furto"]}
+    )
+
+    report = analizza_qualita_dati(dataframe)
+
+    assert report["problemi"] == [{"riga": 2, "errori": ["data mancante"]}]
+
+
+def test_analizza_qualita_dati_ora_mancante():
+    dataframe = pd.DataFrame(
+        {"data": ["2026-01-12"], "ora": [""], "zona": ["Zona_A"], "categoria": ["Furto"]}
+    )
+
+    report = analizza_qualita_dati(dataframe)
+
+    assert report["problemi"] == [{"riga": 2, "errori": ["ora mancante"]}]
+
+
+def test_analizza_qualita_dati_zona_mancante():
+    dataframe = pd.DataFrame(
+        {"data": ["2026-01-12"], "ora": ["22:30"], "zona": [""], "categoria": ["Furto"]}
+    )
+
+    report = analizza_qualita_dati(dataframe)
+
+    assert report["problemi"] == [{"riga": 2, "errori": ["zona mancante"]}]
+
+
+def test_analizza_qualita_dati_categoria_mancante():
+    dataframe = pd.DataFrame(
+        {"data": ["2026-01-12"], "ora": ["22:30"], "zona": ["Zona_A"], "categoria": [""]}
+    )
+
+    report = analizza_qualita_dati(dataframe)
+
+    assert report["problemi"] == [{"riga": 2, "errori": ["categoria mancante"]}]
+
+
+def test_analizza_qualita_dati_data_non_valida():
+    dataframe = pd.DataFrame(
+        {
+            "data": ["data-non-valida"],
+            "ora": ["10:00"],
+            "zona": ["Zona_A"],
+            "categoria": ["Furto"],
+        }
+    )
+
+    report = analizza_qualita_dati(dataframe)
+
+    assert report["problemi"] == [
+        {"riga": 2, "errori": ["data non valida: data-non-valida"]}
+    ]
+
+
+def test_analizza_qualita_dati_ora_non_valida():
+    dataframe = pd.DataFrame(
+        {
+            "data": ["2026-01-12"],
+            "ora": ["29:75"],
+            "zona": ["Zona_A"],
+            "categoria": ["Furto"],
+        }
+    )
+
+    report = analizza_qualita_dati(dataframe)
+
+    assert report["problemi"] == [{"riga": 2, "errori": ["ora non valida: 29:75"]}]
+
+
+def test_analizza_qualita_dati_piu_errori_nella_stessa_riga():
+    dataframe = pd.DataFrame(
+        {"data": ["data-non-valida"], "ora": ["22:30"], "zona": ["Zona_A"], "categoria": [""]}
+    )
+
+    report = analizza_qualita_dati(dataframe)
+
+    assert report["problemi"] == [
+        {
+            "riga": 2,
+            "errori": ["categoria mancante", "data non valida: data-non-valida"],
+        }
+    ]
+
+
+def test_analizza_qualita_dati_riga_duplicata():
+    dataframe = pd.DataFrame(
+        {
+            "data": ["2026-01-12", "2026-01-12"],
+            "ora": ["22:30", "22:30"],
+            "zona": ["Zona_A", "Zona_A"],
+            "categoria": ["Furto", "Furto"],
+        }
+    )
+
+    report = analizza_qualita_dati(dataframe)
+
+    assert report["duplicati"] == 1
+    assert report["problemi"] == [{"riga": 3, "errori": ["record duplicato"]}]
+
+
+def test_analizza_qualita_dati_record_validi_e_invalidi_insieme():
+    dataframe = pd.DataFrame(
+        {
+            "data": ["2026-01-12", "data-non-valida", "2026-01-14"],
+            "ora": ["22:30", "10:00", "08:15"],
+            "zona": ["Zona_A", "Zona_A", "Zona_C"],
+            "categoria": ["Furto", "Furto", "Furto"],
+        }
+    )
+
+    report = analizza_qualita_dati(dataframe)
+
+    assert report["totale_record"] == 3
+    assert report["record_validi"] == 2
+    assert report["record_problematici"] == 1
+    assert [problema["riga"] for problema in report["problemi"]] == [3]
+
+
+def test_analizza_qualita_dati_coerenza_numeri():
+    dataframe = pd.DataFrame(
+        {
+            "data": ["2026-01-12", "data-non-valida", "2026-01-12"],
+            "ora": ["22:30", "10:00", "22:30"],
+            "zona": ["Zona_A", "Zona_A", "Zona_A"],
+            "categoria": ["Furto", "Furto", "Furto"],
+        }
+    )
+
+    report = analizza_qualita_dati(dataframe)
+
+    assert report["totale_record"] == 3
+    assert report["record_validi"] + report["record_problematici"] == report["totale_record"]

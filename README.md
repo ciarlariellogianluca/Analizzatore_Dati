@@ -20,6 +20,8 @@ operative automatiche.
 - Caricamento del dataset da file CSV.
 - Verifica dell'esistenza e della leggibilità del file.
 - Validazione della presenza delle colonne obbligatorie.
+- Controllo qualità del dataset (valori mancanti, date/orari non
+  validi, righe duplicate) con report dettagliato riga per riga.
 - Gestione di dataset vuoti e di valori mancanti o non validi.
 - Conversione e validazione di date e orari.
 - Calcolo del giorno della settimana per ciascun evento.
@@ -72,9 +74,24 @@ py main.py dati_esempio.csv
 In entrambi i casi il riepilogo dell'analisi viene stampato nel
 terminale.
 
+## Controllo qualità dei dati
+
+Prima dell'analisi statistica, il programma esamina il dataset caricato
+e mostra un report di controllo qualità: le righe con valori mancanti
+nelle colonne obbligatorie, con date o orari non validi, o duplicate
+(stessa data, ora, zona e categoria di una riga precedente) vengono
+segnalate singolarmente, con il numero di riga del CSV e il dettaglio
+del problema.
+
+Queste righe vengono escluse dall'analisi statistica successiva, che
+utilizza solo i record validi; il file CSV originale non viene mai
+modificato. Se dopo l'esclusione non rimane alcun record valido, il
+report viene comunque mostrato e il programma termina in modo
+controllato.
+
 ## Test
 
-Il progetto include una suite di 45 test automatici con `pytest`:
+Il progetto include una suite di 59 test automatici con `pytest`:
 
 - unit test su `caricatore_dati.py` e `analisi.py`;
 - property-based test con Hypothesis, che verificano proprietà generali
@@ -187,9 +204,10 @@ La specifica del progetto è disponibile in [doc/specifica.md](doc/specifica.md)
 ## Stato del progetto
 
 Progetto universitario. La versione attuale comprende: il programma di
-analisi con modalità GUI e CLI, la specifica del progetto, una suite di
-45 test automatici (unit, property-based con Hypothesis, integrazione)
-con misurazione della coverage, `pylint` a punteggio massimo, una
+analisi con modalità GUI e CLI, il controllo qualità dei dati, la
+specifica del progetto, una suite di 59 test automatici (unit,
+property-based con Hypothesis, integrazione) con misurazione della
+coverage, `pylint` a punteggio massimo, una
 pipeline CI/CD su GitHub Actions che esegue lint/test/coverage/build ad
 ogni push e pull request, e la pubblicazione automatica dell'immagine
 Docker su Docker Hub ad ogni push su `main`.

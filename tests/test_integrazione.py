@@ -113,3 +113,31 @@ def test_dataset_parzialmente_invalido(tmp_path):
     assert "Totale eventi: 2" in risultato.stdout
     assert "Traceback" not in risultato.stdout
     assert "Traceback" not in risultato.stderr
+
+
+# --- Test 6: report di controllo qualita' -------------------------------------
+
+
+def test_report_controllo_qualita_dataset(tmp_path):
+    percorso_csv = tmp_path / "controllo_qualita.csv"
+    percorso_csv.write_text(
+        "data,ora,zona,categoria\n"
+        "2026-01-12,22:30,Zona_A,Furto\n"
+        "2026-01-13,08:15,Zona_B,Rapina\n"
+        "2026-01-14,,Zona_A,Furto\n"
+        "data-non-valida,10:00,Zona_C,Furto\n"
+        "2026-01-16,29:75,Zona_B,Furto\n"
+        "2026-01-12,22:30,Zona_A,Furto\n"
+    )
+
+    risultato = _esegui_programma(percorso_csv)
+
+    assert risultato.returncode == 0
+    assert "CONTROLLO QUALITA" in risultato.stdout
+    assert "Record problematici" in risultato.stdout
+    assert "Riga 4:" in risultato.stdout
+    assert "ora mancante" in risultato.stdout
+    assert "PUBLIC SAFETY DATA ANALYZER" in risultato.stdout
+    assert "Totale eventi: 2" in risultato.stdout
+    assert "Traceback" not in risultato.stdout
+    assert "Traceback" not in risultato.stderr

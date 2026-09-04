@@ -104,6 +104,15 @@ selezione del file, terminando l'esecuzione senza eseguire alcuna
 analisi qualora l'utente chiuda la finestra di selezione senza scegliere
 un file.
 
+RF13 - Il sistema deve individuare e segnalare, prima dell'analisi
+statistica, i record incompleti (valori mancanti nelle colonne
+obbligatorie), le date o gli orari non validi e i record duplicati
+(stessa data, ora, zona e categoria di un record precedente),
+mostrando un report che indichi il numero di record totali, validi e
+problematici, con il dettaglio riga per riga dei problemi riscontrati.
+I record problematici devono essere esclusi dall'analisi successiva,
+che deve utilizzare solo i record validi.
+
 ## 6. Requisiti non funzionali
 
 RNF01 - Il sistema deve essere eseguibile tramite Python 3 utilizzando
@@ -232,6 +241,31 @@ senza proseguire con un'analisi su dati incompleti o non validi.
 - **Flussi alternativi / errori**: nessuno.
 - **Postcondizioni**: il programma termina in modo controllato senza
   eseguire alcuna analisi.
+
+### CU05 - Analizzare un dataset con record parzialmente non validi
+
+- **Attore**: utente/analista.
+- **Precondizioni**: il file CSV selezionato contiene le colonne
+  obbligatorie, ma alcune righe presentano valori mancanti, date/orari
+  non validi o sono duplicate di righe precedenti; almeno una riga
+  resta valida.
+- **Flusso principale**:
+  1. L'utente seleziona il file CSV.
+  2. Il sistema carica e valida le colonne del file.
+  3. Il sistema analizza la qualità dei dati e mostra un report con il
+     numero di record totali, validi e problematici, indicando per
+     ciascuna riga problematica il numero di riga e gli errori
+     riscontrati.
+  4. Il sistema esclude i record problematici e prosegue l'analisi
+     statistica sui soli record validi.
+  5. Il sistema mostra il riepilogo dell'analisi.
+- **Flussi alternativi / errori**: se dopo l'esclusione dei record
+  problematici non rimane alcun record valido, il sistema mostra
+  comunque il report qualità, quindi termina in modo controllato con
+  un messaggio d'errore e un codice di uscita diverso da zero.
+- **Postcondizioni**: il report di qualità è stato mostrato; l'analisi
+  statistica, se eseguita, riflette solo i record validi; il file
+  originale non è modificato.
 
 ## 11. Vincoli del sistema
 

@@ -1,11 +1,12 @@
 """Property-based test con Hypothesis per caricatore_dati.py e analisi.py."""
 
 import pandas as pd
+import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
 from analisi import conta_eventi_per_categoria, conta_eventi_per_zona, genera_riepilogo
-from caricatore_dati import ottieni_fascia_oraria
+from caricatore_dati import analizza_qualita_dati, ottieni_fascia_oraria, preprocessa_dati
 
 FASCE_ORARIE_VALIDE = [
     "00:00-04:00",
@@ -98,3 +99,32 @@ def test_genera_riepilogo_proprieta_generali(dati):
     assert riepilogo["totale_eventi"] == len(dataframe)
     assert sum(riepilogo["eventi_per_categoria"].values()) == riepilogo["totale_eventi"]
     assert sum(riepilogo["eventi_per_zona"].values()) == riepilogo["totale_eventi"]
+
+
+# --- Property test 6: coerenza tra qualita' e preprocessing -------------------
+
+RIGHE_VALIDE_SINTETICHE = [
+    {"data": "2026-01-12", "ora": "22:30", "zona": "Zona_A", "categoria": "Furto"},
+    {"data": "2026-01-13", "ora": "08:15", "zona": "Zona_B", "categoria": "Rapina"},
+    {"data": "2026-01-14", "ora": "16:45", "zona": "Zona_C", "categoria": "Danneggiamento"},
+]
+RIGA_INVALIDA_SINTETICA = {"data": "2026-01-15", "ora": "10:00", "zona": "Zona_D", "categoria": ""}
+
+
+@given(scelte=st.lists(st.integers(min_value=0, max_value=3), min_size=1, max_size=20))
+def test_coerenza_qualita_dati_e_preprocessa_dati(scelte):
+    """Il numero di record che analizza_qualita_dati() conta come validi deve
+    corrispondere esattamente al numero di righe che preprocessa_dati()
+    mantiene per lo stesso dataset (indipendentemente dal mix di righe
+    valide, invalide o duplicate generato)."""
+    righe = [RIGHE_VALIDE_SINTETICHE[scelta] if scelta < 3 else RIGA_INVALIDA_SINTETICA for scelta in scelte]
+    dataframe = pd.DataFrame(righe)
+
+    report = analizza_qualita_dati(dataframe)
+
+    if report["record_validi"] == 0:
+        with pytest.raises(ValueError):
+            preprocessa_dati(dataframe)
+    else:
+        risultato = preprocessa_dati(dataframe)
+        assert len(risultato) == report["record_validi"]

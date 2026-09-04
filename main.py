@@ -6,7 +6,7 @@ from typing import Any, Dict
 import pandas as pd
 
 from analisi import genera_riepilogo
-from caricatore_dati import carica_dati, preprocessa_dati, valida_colonne
+from caricatore_dati import analizza_qualita_dati, carica_dati, preprocessa_dati, valida_colonne
 
 
 def mostra_schermata_iniziale() -> str:
@@ -100,6 +100,29 @@ def mostra_schermata_iniziale() -> str:
     return percorso_scelto["valore"]
 
 
+def stampa_report_qualita(report: Dict[str, Any]) -> None:
+    """Stampa a video il report di controllo qualita' del dataset."""
+    print("=" * 40)
+    print(" CONTROLLO QUALITA' DATASET")
+    print("=" * 40)
+
+    print(f"\nRecord totali: {report['totale_record']}")
+    print(f"Record validi: {report['record_validi']}")
+    print(f"Record problematici: {report['record_problematici']}")
+
+    if report["problemi"]:
+        print("\nProblemi rilevati:")
+        for problema in report["problemi"]:
+            print(f"\nRiga {problema['riga']}:")
+            for errore in problema["errori"]:
+                print(f"- {errore}")
+        print("\nI record problematici verranno esclusi dall'analisi.")
+    else:
+        print("\nNessun problema rilevato.")
+
+    print()
+
+
 def stampa_riepilogo(riepilogo: Dict[str, Any]) -> None:
     """Stampa a video il riepilogo dell'analisi in formato leggibile."""
     print("=" * 40)
@@ -143,6 +166,8 @@ def main() -> None:
     try:
         dataframe = carica_dati(percorso_file)
         valida_colonne(dataframe)
+        report_qualita = analizza_qualita_dati(dataframe)
+        stampa_report_qualita(report_qualita)
         dataframe = preprocessa_dati(dataframe)
         riepilogo = genera_riepilogo(dataframe)
     except (FileNotFoundError, PermissionError, ValueError, pd.errors.ParserError) as errore:

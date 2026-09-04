@@ -1,7 +1,7 @@
 """Caricamento, validazione e preprocessing del dataset CSV."""
 
 import os
-from typing import List
+from typing import Any, Dict, List
 
 import pandas as pd
 
@@ -70,17 +70,87 @@ def ottieni_fascia_oraria(ora: int) -> str:
     return "20:00-24:00"
 
 
+def _converti_data(colonna_data: pd.Series) -> pd.Series:
+    """Converte la colonna 'data' in datetime; i valori non validi diventano NaT."""
+    return pd.to_datetime(colonna_data, errors="coerce")
+
+
+def _converti_ora(colonna_ora: pd.Series) -> pd.Series:
+    """Converte la colonna 'ora' (formato HH:MM); i valori non validi diventano NaT."""
+    return pd.to_datetime(colonna_ora, format="%H:%M", errors="coerce")
+
+
+def _valore_mancante(valore: Any) -> bool:
+    """Indica se un valore di cella e' da considerarsi mancante (vuoto o NaN)."""
+    return pd.isna(valore) or str(valore).strip() == ""
+
+
+def analizza_qualita_dati(dataframe: pd.DataFrame) -> Dict[str, Any]:
+    """Analizza la qualita' del dataset grezzo, prima del preprocessing.
+
+    Individua, riga per riga, valori mancanti nelle colonne obbligatorie,
+    date/orari non validi e duplicati (stessa data, ora, zona e
+    categoria di una riga precedente: si considera duplicata ogni
+    occorrenza successiva alla prima). Non modifica il DataFrame e non
+    stampa nulla. Assume che l'indice del DataFrame sia quello di
+    default (0, 1, 2, ...), coerente con un CSV appena caricato, cosi'
+    che il numero di riga mostrato (indice + 2) corrisponda alla riga
+    reale nel file CSV (riga 1 = intestazione).
+    """
+    date_convertite = _converti_data(dataframe["data"])
+    ore_convertite = _converti_ora(dataframe["ora"])
+    duplicati = dataframe.duplicated(subset=COLONNE_OBBLIGATORIE, keep="first")
+
+    problemi = []
+    for indice in dataframe.index:
+        riga = dataframe.loc[indice]
+        errori = [
+            f"{colonna} mancante"
+            for colonna in COLONNE_OBBLIGATORIE
+            if _valore_mancante(riga[colonna])
+        ]
+
+        if not _valore_mancante(riga["data"]) and pd.isna(date_convertite[indice]):
+            errori.append(f"data non valida: {riga['data']}")
+
+        if not _valore_mancante(riga["ora"]) and pd.isna(ore_convertite[indice]):
+            errori.append(f"ora non valida: {riga['ora']}")
+
+        if duplicati[indice]:
+            errori.append("record duplicato")
+
+        if errori:
+            problemi.append({"riga": int(indice) + 2, "errori": errori})
+
+    totale_record = int(len(dataframe))
+    record_problematici = len(problemi)
+
+    return {
+        "totale_record": totale_record,
+        "record_validi": totale_record - record_problematici,
+        "record_problematici": record_problematici,
+        "duplicati": int(duplicati.sum()),
+        "problemi": problemi,
+    }
+
+
 def preprocessa_dati(dataframe: pd.DataFrame) -> pd.DataFrame:
     """Pulisce e arricchisce il DataFrame con colonne derivate.
 
     Converte 'data' in datetime, valida 'ora', calcola il giorno della
     settimana e la fascia oraria. Le righe con valori mancanti o non
-    validi in una delle colonne obbligatorie vengono scartate.
+    validi in una delle colonne obbligatorie, o duplicate rispetto a una
+    riga precedente (stessa data, ora, zona e categoria), vengono
+    scartate: questo mantiene il risultato coerente con
+    analizza_qualita_dati().
     """
     df = dataframe.copy()
 
-    df["data"] = pd.to_datetime(df["data"], errors="coerce")
-    ora_analizzata = pd.to_datetime(df["ora"], format="%H:%M", errors="coerce")
+    for colonna in ("zona", "categoria"):
+        df[colonna] = df[colonna].apply(lambda v: pd.NA if _valore_mancante(v) else v)
+
+    df["data"] = _converti_data(df["data"])
+    ora_analizzata = _converti_ora(df["ora"])
 
     df["ora"] = ora_analizzata.dt.strftime("%H:%M")
     df["giorno_settimana"] = df["data"].dt.dayofweek.map(_NOMI_GIORNI_SETTIMANA)
@@ -93,6 +163,7 @@ def preprocessa_dati(dataframe: pd.DataFrame) -> pd.DataFrame:
     df = df.dropna(
         subset=["data", "ora", "zona", "categoria", "giorno_settimana", "fascia_oraria"]
     )
+    df = df.drop_duplicates(subset=COLONNE_OBBLIGATORIE, keep="first")
     df = df.reset_index(drop=True)
 
     if df.empty:
